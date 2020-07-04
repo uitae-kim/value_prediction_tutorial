@@ -2,6 +2,7 @@ import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import tensorflow as tf
+import keras
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
