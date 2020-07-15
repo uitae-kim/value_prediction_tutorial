@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def model(layer, num_features):
     # session
-    net = tf.InteractiveSession()
+    net = tf.Session()
 
     X = tf.placeholder(dtype=tf.float32, shape=[None, num_features])
     y = tf.placeholder(dtype=tf.float32, shape=[None])
@@ -64,13 +64,6 @@ def model(layer, num_features):
 
 
 def run(network, error, output, X_train, y_train, X_cv, y_cv, X_test, y_test, batch_size=8, num_epochs=100):
-    plt.ion()
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-    ax1.plot(y_test)
-    line2, = ax1.plot(y_test * 0.5)
-    plt.show()
-
     # fit
     mse_train = []
     mse_cv = []
@@ -95,12 +88,7 @@ def run(network, error, output, X_train, y_train, X_cv, y_cv, X_test, y_test, ba
                 mse_cv.append(error(X_cv, y_cv))
                 mse_test.append(error(X_test, y_test))
                 print(f'Train Error: {mse_train[-1]} / Cross Validation Error: {mse_cv[-1]} / Test Error: {mse_test[-1]}')
-                plt.title(f'Epoch: {epoch} / Batch: {i}')
 
                 pred = output(X_test)
 
-                line2.set_ydata(pred)
-                plt.pause(0.01)
-
-    plt.waitforbuttonpress()
     return pred.transpose()
