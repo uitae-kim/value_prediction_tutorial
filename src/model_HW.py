@@ -1,131 +1,106 @@
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-warnings.simplefilter(action='ignore', category=Warning)
-
 import tensorflow as tf
 import numpy as np
-import pandas as pd
-from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 
-data = np.load('data/fa_data_2012_2019.npy', allow_pickle=True)
-data = data[data[:, 0].argsort()]
 
-# m = number of data / f = feature dimension (Y + X)
-(m, f) = data.shape
+def model(layer, num_features):
+    # session
+    net = tf.InteractiveSession()
 
-# training / test index
-cut = list(data[:, 0]).index(19.0)
-train_start = 0
-train_end = cut
-test_start = cut
-test_end = m
-data_train = data[np.arange(train_start, train_end), :]
-data_test = data[np.arange(test_start, test_end), :]
+    X = tf.placeholder(dtype=tf.float32, shape=[None, num_features])
+    y = tf.placeholder(dtype=tf.float32, shape=[None])
 
-# scaler
-scaler = MinMaxScaler(feature_range=(-1, 1))
-scaler.fit(data_train)
-data_train = scaler.transform(data_train)
-data_test = scaler.transform(data_test)
+    # init theta
+    sigma = 1
+    weight_initializer = tf.variance_scaling_initializer(
+        mode='fan_avg',
+        distribution='uniform',
+        scale=sigma
+    )
+    bias_initializer = tf.zeros_initializer()
 
-# create training / test data
-X_train = data_train[:, 1:-1]
-y_train = data_train[:, -1]
-X_test = data_test[:, 1:-1]
-y_test = data_test[:, -1]
+    W_hidden = []
+    bias_hidden = []
 
-n_stocks = X_train.shape[1]
+    for i in range(len(layer)):
+        if i == 0:
+            _in = num_features
+        else:
+            _in = layer[i - 1]
+        _out = layer[i]
 
-layer = [2048, 1024, 512, 256, 128]
+        W_hidden.append(tf.Variable(weight_initializer([_in, _out])))
+        bias_hidden.append(tf.Variable(bias_initializer([_out])))
 
-# session
-net = tf.InteractiveSession()
+    W_out = tf.Variable(weight_initializer([layer[-1], 1]))
+    bias_out = tf.Variable(bias_initializer([1]))
 
-X = tf.placeholder(dtype=tf.float32, shape=[None, n_stocks])
-y = tf.placeholder(dtype=tf.float32, shape=[None])
+    # layers
+    hidden = []
+    for i in range(len(layer)):
+        if i == 0:
+            _in = X
+        else:
+            _in = hidden[i - 1]
+        _W_hidden = W_hidden[i]
+        _bias = bias_hidden[i]
+        hidden.append(tf.nn.relu(tf.add(tf.matmul(_in, _W_hidden), _bias)))
 
-# init theta
-sigma = 1
-weight_initializer = tf.variance_scaling_initializer(
-    mode='fan_avg',
-    distribution='uniform',
-    scale=sigma
-)
-bias_initializer = tf.zeros_initializer()
+    out = tf.transpose(tf.add(tf.matmul(hidden[-1], W_out), bias_out))
 
-W_hidden = []
-bias_hidden = []
+    # cost function
+    mse = tf.reduce_mean(tf.squared_difference(out, y))
 
-for i in range(len(layer)):
-    if i == 0:
-        _in = n_stocks
-    else:
-        _in = layer[i - 1]
-    _out = layer[i]
+    # optimizer
+    adam = tf.train.AdamOptimizer().minimize(mse)
 
-    W_hidden.append(tf.Variable(weight_initializer([_in, _out])))
-    bias_hidden.append(tf.Variable(bias_initializer([_out])))
+    net.run(tf.global_variables_initializer())
 
-W_out = tf.Variable(weight_initializer([layer[-1], 1]))
-bias_out = tf.Variable(bias_initializer([1]))
+    network = lambda data_x, data_y: net.run(adam, feed_dict={X: data_x, y: data_y})
+    error = lambda data_x, data_y: net.run(mse, feed_dict={X: data_x, y: data_y})
+    output = lambda data_x: net.run(out, feed_dict={X: data_x})
 
-# layers
-hidden = []
-for i in range(len(layer)):
-    if i == 0:
-        _in = X
-    else:
-        _in = hidden[i - 1]
-    _W_hidden = W_hidden[i]
-    _bias = bias_hidden[i]
-    hidden.append(tf.nn.relu(tf.add(tf.matmul(_in, _W_hidden), _bias)))
+    return network, error, output
 
-out = tf.transpose(tf.add(tf.matmul(hidden[-1], W_out), bias_out))
 
-# cost function
-mse = tf.reduce_mean(tf.squared_difference(out, y))
+def run(network, error, output, X_train, y_train, X_cv, y_cv, X_test, y_test, batch_size=8, num_epochs=100):
+    plt.ion()
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax1.plot(y_test)
+    line2, = ax1.plot(y_test * 0.5)
+    plt.show()
 
-# optimizer
-adam = tf.train.AdamOptimizer().minimize(mse)
+    # fit
+    mse_train = []
+    mse_cv = []
+    mse_test = []
 
-net.run(tf.global_variables_initializer())
+    pred = y_test.transpose()
 
-plt.ion()
-fig = plt.figure()
-ax1 = fig.add_subplot(111)
-line1, = ax1.plot(y_test)
-line2, = ax1.plot(y_test * 0.5)
-plt.show()
+    for epoch in range(num_epochs):
+        shuffle = np.random.permutation(np.arange(len(y_train)))
+        X_train = X_train[shuffle]
+        y_train = y_train[shuffle]
 
-# fit
-batch_size = 8
-mse_train = []
-mse_test = []
+        for i in range(0, X_train.shape[0] // batch_size):
+            start = i * batch_size
+            batch_X = X_train[start:start + batch_size]
+            batch_y = y_train[start:start + batch_size]
 
-print(cut // batch_size)
+            network(batch_X, batch_y)
 
-num_epochs = 100
-for epoch in range(num_epochs):
-    shuffle = np.random.permutation(np.arange(len(y_train)))
-    X_train = X_train[shuffle]
-    y_train = y_train[shuffle]
+            if np.mod(i, 10) == 0:
+                mse_train.append(error(X_train, y_train))
+                mse_cv.append(error(X_cv, y_cv))
+                mse_test.append(error(X_test, y_test))
+                print(f'Train Error: {mse_train[-1]} / Cross Validation Error: {mse_cv[-1]} / Test Error: {mse_test[-1]}')
+                plt.title(f'Epoch: {epoch} / Batch: {i}')
 
-    for i in range(0, cut // batch_size):
-        start = i * batch_size
-        batch_X = X_train[start:start + batch_size]
-        batch_y = y_train[start:start + batch_size]
+                pred = output(X_test)
 
-        net.run(adam, feed_dict={X: batch_X, y: batch_y})
+                line2.set_ydata(pred)
+                plt.pause(0.01)
 
-        if np.mod(i, 10) == 0:
-            mse_train.append(net.run(mse, feed_dict={X: X_train, y: y_train}))
-            mse_test.append(net.run(mse, feed_dict={X: X_test, y: y_test}))
-            print(f'Train Error: {mse_train[-1]} / Test Error: {mse_test[-1]}')
-
-            pred = net.run(out, feed_dict={X: X_test})
-            plt.title(f'Epoch: {epoch} / Batch: {i}')
-            line2.set_ydata(pred)
-            plt.pause(0.01)
-
-plt.waitforbuttonpress()
+    plt.waitforbuttonpress()
+    return pred.transpose()
