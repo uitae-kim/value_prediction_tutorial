@@ -139,4 +139,4 @@ cython_debug/
 
 # .idea
 .idea
-/data/
+/data/data_stocks.csv
