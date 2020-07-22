@@ -140,3 +140,5 @@ cython_debug/
 # .idea
 .idea
 /data/data_stocks.csv
+/data/result.csv
+/checkpoints
