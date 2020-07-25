@@ -10,13 +10,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=Warning)
 
 # target
-if len(sys.argv) < 3:
-    path = './data/fa_data_2012_2019_[5.0, 3.0, 2.0].npy'
-else:
-    if 'p' in sys.argv[2].lower():
-        path = './data/fa_data_2012_2019_[5.0, 3.0, 2.0]_pit.npy'
-    else:
-        path = './data/fa_data_2012_2019_[5.0, 3.0, 2.0]_bat.npy'
+path = sys.argv[2]
 
 # model size
 max_size = int(sys.argv[1])
