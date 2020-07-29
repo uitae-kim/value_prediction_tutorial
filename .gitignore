@@ -142,3 +142,4 @@ cython_debug/
 /data/data_stocks.csv
 /data/result.csv
 /checkpoints
+/data
