@@ -21,6 +21,7 @@ epochs = int(sys.argv[3])
 # additional params
 name = sys.argv[4]
 l = float(sys.argv[5])
+use_reg = sys.argv[5] != '0'
 
 # data
 train, cv, test, raw = load(path)
@@ -28,7 +29,7 @@ train, cv, test, raw = load(path)
 
 # model
 create_checkpoint_dir(str(layers[0]))
-network, error, output, save = model(layers, X_train.shape[1], name, l)
+network, error, output, save = model(layers, X_train.shape[1], name, l, use_reg)
 pred = run(network, error, output, save,
            X_train, y_train, X_cv, y_cv, X_test, y_test,
            num_epochs=epochs)
