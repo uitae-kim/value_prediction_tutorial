@@ -12,7 +12,7 @@ def create_checkpoint_dir(path):
         os.makedirs(f'checkpoints/{path}')
 
 
-def model(layer, num_features):
+def model(layer, num_features, name, l):
     # session
     net = tf.Session()
 
@@ -64,7 +64,6 @@ def model(layer, num_features):
     reg.append(tf.nn.l2_loss(W_out))
     mse = tf.reduce_mean(tf.squared_difference(out, y))
 
-    l = 0.01  # regularization parameter lambda
     reg_mse = mse
     for r in reg:
         reg_mse += r * l
@@ -83,7 +82,7 @@ def model(layer, num_features):
     network = lambda data_x, data_y: net.run(adam, feed_dict={X: data_x, y: data_y})
     error = lambda data_x, data_y: net.run(mse, feed_dict={X: data_x, y: data_y})
     output = lambda data_x: net.run(out, feed_dict={X: data_x})
-    save = lambda step: saver.save(net, f'./checkpoints/{layer[0]}', step)
+    save = lambda step: saver.save(net, f'./checkpoints/{name}/{layer[0]}', step)
 
     return network, error, output, save
 
