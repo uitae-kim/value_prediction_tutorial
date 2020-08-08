@@ -58,10 +58,21 @@ def model(layer, num_features):
     out = tf.transpose(tf.add(tf.matmul(hidden[-1], W_out), bias_out))
 
     # cost function
+    reg = []
+    for w in W_hidden:
+        reg.append(tf.nn.l2_loss(w))
+    reg.append(tf.nn.l2_loss(W_out))
     mse = tf.reduce_mean(tf.squared_difference(out, y))
 
+    l = 0.01  # regularization parameter lambda
+    reg_mse = mse
+    for r in reg:
+        reg_mse += r * l
+
+    loss = tf.reduce_mean(reg_mse)
+
     # optimizer
-    adam = tf.train.AdamOptimizer().minimize(mse)
+    adam = tf.train.AdamOptimizer().minimize(loss)
 
     net.run(tf.global_variables_initializer())
 
