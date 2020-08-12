@@ -24,4 +24,5 @@ def save(train, eval, test, path):
 
 
 if __name__ == '__main__':
-    parse('./data/colab_result_all')
+    parse('./data/colab_result_all_512_noreg')
+    parse('./data/colab_result_all_512_reg')

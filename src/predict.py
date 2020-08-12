@@ -31,7 +31,9 @@ def predict(data, path):
 
         result = sess.run(out, feed_dict={X: data})
 
-        return _scaler.inverse_transform(np.concatenate((data, np.transpose(result)), axis=1))[:, -1]
+        result = _scaler.inverse_transform(np.concatenate((data, np.transpose(result)), axis=1))[:, -1]
+
+    return result
 
 
 def create_path(suffix, start, end, ratio, is_modified):
@@ -43,8 +45,9 @@ def create_path(suffix, start, end, ratio, is_modified):
     return path
 
 
-if __name__ == '__main__':
-    suffix = 'fangraphs'
+def run_prediction(suffix, cp_path, model_type):
+    global _scaler, _X_test, _X_raw, _y_test
+
     start = 2012
     end = 2019
     ratio = [5.0, 3.0, 2.0]
@@ -70,9 +73,8 @@ if __name__ == '__main__':
         data = _scaler.transform(data[:, idx])
         _X_test = data[:, :-1]
 
-    path = './checkpoints/2048/2048-99.meta'
     names = _X_raw[:, 1]
-    price = predict(_X_test, path)
+    price = predict(_X_test, cp_path)
     # price = price / 1000000
 
     header = ['season', 'name', 'age']
@@ -98,12 +100,28 @@ if __name__ == '__main__':
     plt.ion()
     fig = plt.figure()
     ax1 = fig.add_subplot(111)
+    ax1.set_ylim([-0.5 * 10 ** 7, 4.5 * 10 ** 7])
     ax1.plot(_y_test, 'r')
     ax1.plot(result[:, 1], 'g')
-    plt.waitforbuttonpress()
+    # plt.waitforbuttonpress()
+    plt.savefig(f'./data/{suffix}_{model_type}.png')
 
     save_path = f'./data/result_{suffix}{"_all" if collect_all else ""}.csv'
     with open(save_path, 'w') as f:
         for r in result:
             # name / predicted / contract / position
             f.write(f'{r[0]},{r[1]/1000000},{r[3]/1000000},{r[2]}\n')
+
+
+if __name__ == '__main__':
+    suffix_list = ['leagueadjust', 'leagueadjust', 'all', 'all',
+                   'classical', 'classical', 'fangraphs', 'fangraphs']
+    path_list = ['ADJ_REG_OFF', 'ADJ_REG_ON', 'ALL_REG_OFF', 'ALL_REG_ON',
+                 'CLASSIC_REG_OFF', 'CLASSIC_REG_ON', 'FG_REG_OFF', 'FG_REG_ON']
+    size = 1024
+    epoch = 149
+
+    combine_path = [f'./checkpoints/{p}/{size}-{epoch}.meta' for p in path_list]
+
+    for i in [4, 5]:
+        run_prediction(suffix_list[i], combine_path[i], path_list[i])
